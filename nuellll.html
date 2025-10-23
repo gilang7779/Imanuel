@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flappy Bird Game</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(to bottom, #4ec0ca, #ffffff);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    canvas {
+      background: linear-gradient(to bottom, #70c5ce, #ffffff);
+      border: 3px solid #333;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+
+    #score {
+      position: absolute;
+      top: 20px;
+      font-size: 28px;
+      color: #fff;
+      text-shadow: 2px 2px 5px #000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="score">Score: 0</div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreText = document.getElementById('score');
+
+    // Game variables
+    let frames = 0;
+    let score = 0;
+    const gravity = 0.25;
+    const jump = 4.6;
+    let gameOver = false;
+
+    // Bird
+    const bird = {
+      x: 50,
+      y: 150,
+      radius: 12,
+      velocity: 0,
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffcc00";
+        ctx.fill();
+        ctx.strokeStyle = "#ffa500";
+        ctx.stroke();
+      },
+      update() {
+        this.velocity += gravity;
+        this.y += this.velocity;
+
+        // Cegah jatuh ke tanah
+        if (this.y + this.radius >= canvas.height - 50) {
+          this.y = canvas.height - 50 - this.radius;
+          gameOver = true;
+        }
+      },
+      flap() {
+        this.velocity = -jump;
+      }
+    };
+
+    // Pipes
+    const pipes = [];
+    const pipeGap = 120;
+    const pipeWidth = 60;
+    const pipeSpeed = 2;
+
+    function spawnPipe() {
+      const topHeight = Math.floor(Math.random() * (canvas.height / 2)) + 50;
+      pipes.push({
+        x: canvas.width,
+        topHeight,
+        bottomY: topHeight + pipeGap
+      });
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = "#4CAF50";
+      pipes.forEach(pipe => {
+        // Pipa atas
+        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.topHeight);
+        // Pipa bawah
+        ctx.fillRect(pipe.x, pipe.bottomY, pipeWidth, canvas.height - pipe.bottomY);
+      });
+    }
+
+    function updatePipes() {
+      pipes.forEach((pipe, i) => {
+        pipe.x -= pipeSpeed;
+
+        // Cek tabrakan
+        if (
+          bird.x + bird.radius > pipe.x &&
+          bird.x - bird.radius < pipe.x + pipeWidth &&
+          (bird.y - bird.radius < pipe.topHeight || bird.y + bird.radius > pipe.bottomY)
+        ) {
+          gameOver = true;
+        }
+
+        // Tambah score
+        if (pipe.x + pipeWidth === bird.x) {
+          score++;
+          scoreText.textContent = "Score: " + score;
+        }
+
+        // Hapus pipa keluar layar
+        if (pipe.x + pipeWidth < 0) {
+          pipes.splice(i, 1);
+        }
+      });
+
+      // Tambah pipa setiap 90 frame
+      if (frames % 90 === 0) {
+        spawnPipe();
+      }
+    }
+
+    function drawGround() {
+      ctx.fillStyle = "#ded895";
+      ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = "#70c5ce";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function resetGame() {
+      bird.y = 150;
+      bird.velocity = 0;
+      pipes.length = 0;
+      score = 0;
+      scoreText.textContent = "Score: 0";
+      gameOver = false;
+      frames = 0;
+      animate();
+    }
+
+    function animate() {
+      if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "32px Poppins";
+        ctx.fillText("Game Over", 120, 280);
+        ctx.font = "20px Poppins";
+        ctx.fillText("Klik untuk main lagi", 110, 320);
+        return;
+      }
+
+      frames++;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      drawPipes();
+      drawGround();
+      bird.draw();
+      bird.update();
+      updatePipes();
+
+      requestAnimationFrame(animate);
+    }
+
+    canvas.addEventListener("click", () => {
+      if (gameOver) {
+        resetGame();
+      } else {
+        bird.flap();
+      }
+    });
+
+    animate();
+  </script>
+</body>
+</html>
